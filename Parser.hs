@@ -31,7 +31,7 @@ instance Monad Parser where
 
 instance Alternative Parser where
  empty = Parser $ \s -> []
- (<|>) a b = Parser $ \s -> let a' = parse a s in 
+ (<|>) a b = Parser $ \s -> let a' = parse a s in
                               case a' of
                                   [] -> parse b s
                                   _  -> a'
@@ -73,16 +73,21 @@ whitespace = many (symbol ' ')
 parseJson = parseString <|> parseBool
 
 parseRecord :: Parser (String, JsonType)
-parseRecord = (,) <$> parseStringLiteral <* whitespace <* symbol ':' <* whitespace <*> parseJson
+parseRecord =  (,) <$> parseStringLiteral <* whitespace <* symbol ':' <* whitespace <*> parseJson
  
 parseMap :: Parser JsonType
-parseMap = symbol '{' *>  whitespace *> (JsonMap <$> (many parseRecord)) <* whitespace <* symbol '}'
+parseMap = symbol '{' *>  whitespace *> (JsonMap <$> (many record)) <* whitespace <* symbol '}'
+   where record = (do
+              symbol ','
+              parseRecord)
+               <|> parseRecord 
 
 parseFile :: Show a => FilePath -> Parser a -> IO ()
 parseFile fileName parser = do
    content <- readFile fileName
    parsedContent <- return (parse parser content)
    putStrLn (show parsedContent)
+
 
 main :: IO ()
 main = do 
