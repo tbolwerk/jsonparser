@@ -2,7 +2,8 @@ module Main where
 import Control.Applicative
 import Data.Char
 
-data JsonType = JsonBool Bool | JsonString String | JsonMap [(String, JsonType)] | JsonArray [JsonType] | JsonNull | JsonInt Int
+data JsonType = JsonBool Bool | JsonString String | JsonMap [(String, JsonType)] | JsonArray [JsonType] | JsonNull | JsonInt Int | JsonFloat Float
+
  deriving Show
 
 newtype Parser a = Parser { parse :: String -> [(a, String)] }
@@ -70,7 +71,7 @@ whitespace = many (satisfy isSpace)
 
 
 parseJson :: Parser JsonType
-parseJson =  (parseString <|> parseBool <|> parseNumber <|> parseArray)
+parseJson =  parseString <|> parseBool <|> parseNumber <|> parseArray <|> parseMap
 
 parseRecord :: Parser (String, JsonType)
 parseRecord =  (,) <$> parseStringLiteral <* whitespace <* symbol ':' <* whitespace <*> parseJson
@@ -88,6 +89,14 @@ parseMap = symbol '{' *>  whitespace *> (JsonMap <$> (many record)) <* whitespac
 digit :: Parser Char
 digit = satisfy isDigit
 
+parseFloat :: Parser Float
+parseFloat = do
+  xs <- some digit
+  x  <- symbol '.'
+  ys <- some digit
+  return (read (xs))
+
+
 parseInt :: Parser Int
 parseInt = do
  xs <- some digit
@@ -95,8 +104,7 @@ parseInt = do
 
 -- TODO: Implement for float, double aswell.
 parseNumber :: Parser JsonType
-parseNumber =  JsonInt <$> parseInt 
-
+parseNumber =  (JsonFloat <$> parseFloat) <|> (JsonInt <$> parseInt) 
 parseArray :: Parser JsonType
 parseArray = symbol '[' *> whitespace *> (JsonArray <$> (many element)) <* whitespace <* symbol ']'
  where element = (do 
