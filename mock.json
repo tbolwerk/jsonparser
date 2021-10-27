@@ -1,0 +1,44 @@
+{
+	"_id": "61796f1509e53abe02c1552b",
+	"index": 0,
+	"guid": "86d50d1d-3e4a-4440-a9a0-5ce3c9059234",
+	"isActive": false,
+	"balance": "$3,243.66",
+	"picture": "http://placehold.it/32x32",
+	"age": 37,
+	"eyeColor": "brown",
+	"name": "Estella Carson",
+	"gender": "female",
+	"company": "FORTEAN",
+	"email": "estellacarson@fortean.com",
+	"phone": "+1 (929) 429-3775",
+	"address": "206 Agate Court, Marenisco, Idaho, 3613",
+	"about": "Minim reprehenderit quis non elit est cupidatat eiusmod laboris dolore anim deserunt fugiat. Et ullamco est anim dolore sint. Minim occaecat ullamco nisi proident aliquip ipsum elit ex eu quis ut magna. Pariatur excepteur consectetur labore ea nostrud ullamco laboris anim excepteur do excepteur aliquip.\r\n",
+	"registered": "2016-01-30T12:39:39 -01:00",
+	"latitude": 13.221785,
+	"longitude": 167.322341,
+	"tags": [
+		"velit",
+		"laboris",
+		"magna",
+		"velit",
+		"mollit",
+		"nisi",
+		"consectetur"
+	],
+	"friends": [{
+			"id": 0,
+			"name": "Melton Norman"
+		},
+		{
+			"id": 1,
+			"name": "Salazar Richmond"
+		},
+		{
+			"id": 2,
+			"name": "Madeline Drake"
+		}
+	],
+	"greeting": "Hello, Estella Carson! You have 3 unread messages.",
+	"favoriteFruit": "strawberry"
+}

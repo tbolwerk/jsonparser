@@ -3,42 +3,48 @@ import Control.Applicative
 import Data.Char
 
 data JsonType = JsonBool Bool | JsonString String | JsonMap [(String, JsonType)] | JsonArray [JsonType] | JsonNull | JsonInt Int | JsonFloat Float
-
  deriving Show
 
-newtype Parser a = Parser { parse :: String -> [(a, String)] }
+data ParseError = ParseError Int String deriving Show
+
+data Input = Input
+             {  loc :: Int,
+                inp :: String
+             } deriving (Show, Eq)
+
+newtype Parser a = Parser { parse :: Input -> Either ParseError (a, Input) }
 
 instance Functor Parser where
  fmap f x = Parser $ \s -> case parse x s of
-                              [] -> []
-                              [(a, s')] -> [(f a, s')]
+                              (Left e) -> (Left e)
+                              (Right (a, s')) -> (Right (f a, s'))
 
 instance Applicative Parser where
- pure x = Parser $ \s -> [(x, s)]
+ pure x = Parser $ \s -> Right (x, s)
  (<*>) f x = Parser $ \s -> case parse f s of
-                               [] -> []
-                               [(f,s')] ->  case parse x s' of
-                                                   [] -> []
-                                                   [(a, s'')] -> [(f a, s'')]
+                               (Left e) -> (Left e) 
+                               (Right (f,s')) ->  case parse x s' of
+                                                   (Left e') -> (Left e')
+                                                   (Right (a, s'')) -> (Right (f a, s''))
 
 instance Monad Parser where
  return = pure
  (>>=) ma f = Parser $ \s -> case parse ma s of
-                                    [] -> []
-                                    [(a, s')] -> parse (f a) s'
+                                    (Left e) -> (Left e)
+                                    (Right (a, s')) -> parse (f a) s'
 
 
 instance Alternative Parser where
- empty = Parser $ \s -> []
+ empty = Parser $ \s -> Left $ ParseError (loc s) (inp s)
  (<|>) a b = Parser $ \s -> let a' = parse a s in
                               case a' of
-                                  [] -> parse b s
+                                  (Left _) -> parse b s
                                   _  -> a'
 
 parseChar :: Parser Char
 parseChar = Parser $ \s -> case s of
-                             (x:xs) -> [(x,xs)]
-                             []     -> empty
+                             (Input loc (x:xs)) -> Right (x,(Input (loc +1) (xs)))
+                             (Input loc [])     -> Left $ ParseError (loc) "failed parsing character"
 
 satisfy :: (Char -> Bool) -> Parser Char
 satisfy p = let pmc = fmap (\x -> if p x then Just x else Nothing) parseChar
@@ -69,10 +75,8 @@ parseString = JsonString <$> parseStringLiteral
 
 whitespace = many (satisfy isSpace) 
 
-
 parseJson :: Parser JsonType
-parseJson =  parseString <|> parseBool <|> parseNumber <|> parseArray <|> parseMap
-
+parseJson =  parseArray <|> parseMap <|> parseString <|> parseBool <|> parseNumber
 parseRecord :: Parser (String, JsonType)
 parseRecord =  (,) <$> parseStringLiteral <* whitespace <* symbol ':' <* whitespace <*> parseJson
  
@@ -94,7 +98,7 @@ parseFloat = do
   xs <- some digit
   x  <- symbol '.'
   ys <- some digit
-  return (read (xs))
+  return (read (xs ++ [x] ++ ys))
 
 
 parseInt :: Parser Int
@@ -102,9 +106,9 @@ parseInt = do
  xs <- some digit
  return (read xs)
 
--- TODO: Implement for float, double aswell.
 parseNumber :: Parser JsonType
 parseNumber =  (JsonFloat <$> parseFloat) <|> (JsonInt <$> parseInt) 
+
 parseArray :: Parser JsonType
 parseArray = symbol '[' *> whitespace *> (JsonArray <$> (many element)) <* whitespace <* symbol ']'
  where element = (do 
@@ -115,18 +119,20 @@ parseArray = symbol '[' *> whitespace *> (JsonArray <$> (many element)) <* white
                                      whitespace
                                      parseJson)
 
-
-parseFile :: Show a => FilePath -> Parser a -> IO ()
-parseFile fileName parser = do
-   content <- readFile fileName
-   parsedContent <- return (parse parser content)
+printParse :: Show a => FilePath -> Parser a -> IO ()
+printParse fileName parser = do
+   parsedContent <- parseFile fileName parser
    putStrLn (show parsedContent)
 
-
+parseFile :: Show a => FilePath -> Parser a -> IO (Either ParseError (a, Input))
+parseFile fileName parser = do
+   content <- readFile fileName
+   return (parse parser (Input 0 content))
+   
 main :: IO ()
 main = do 
  path <- readLn
- parseFile path parseMap
+ printParse path parseJson
 
 
 
