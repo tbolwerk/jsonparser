@@ -1,5 +1,6 @@
 {
-	"firstname": "Twan",
-	"lastname" : "Bolwerk",
-	"age"      : 26
+	"firstname":"Twan",
+	"lastname":"Bolwerk",
+       	"age": 26
 }
+

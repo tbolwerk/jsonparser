@@ -2,7 +2,6 @@ module Main where
 import Control.Applicative
 import Data.Char
 
-
 data JsonType = JsonBool Bool | JsonString String | JsonMap [(String, JsonType)] | JsonArray [JsonType] | JsonNull | JsonInt Int
  deriving Show
 
@@ -67,10 +66,11 @@ parseBool = JsonBool <$> ((True <$ token "true") <|> (False <$ token "false"))
 parseString :: Parser JsonType
 parseString = JsonString <$> parseStringLiteral
 
-whitespace = many (symbol ' ')
+whitespace = many (satisfy isSpace) 
+
 
 parseJson :: Parser JsonType
-parseJson = parseString <|> parseBool <|> parseNumber
+parseJson =  (parseString <|> parseBool <|> parseNumber <|> parseArray)
 
 parseRecord :: Parser (String, JsonType)
 parseRecord =  (,) <$> parseStringLiteral <* whitespace <* symbol ':' <* whitespace <*> parseJson
@@ -82,14 +82,31 @@ parseMap = symbol '{' *>  whitespace *> (JsonMap <$> (many record)) <* whitespac
               symbol ','
               whitespace
               parseRecord)
-               <|> parseRecord 
+               <|> (do 
+                      whitespace 
+                      parseRecord)
+digit :: Parser Char
+digit = satisfy isDigit
 
+parseInt :: Parser Int
+parseInt = do
+ xs <- some digit
+ return (read xs)
+
+-- TODO: Implement for float, double aswell.
 parseNumber :: Parser JsonType
-parseNumber = do
-          mc <- fmap (\x -> if isDigit x then Just x else Nothing) parseChar
-          case mc of
-             Just digit -> return (JsonInt (digitToInt digit)) -- TODO: currently only parses one integer
-             Nothing    -> empty
+parseNumber =  JsonInt <$> parseInt 
+
+parseArray :: Parser JsonType
+parseArray = symbol '[' *> whitespace *> (JsonArray <$> (many element)) <* whitespace <* symbol ']'
+ where element = (do 
+                    whitespace
+                    symbol ','
+                    whitespace
+                    parseJson) <|> (do 
+                                     whitespace
+                                     parseJson)
+
 
 parseFile :: Show a => FilePath -> Parser a -> IO ()
 parseFile fileName parser = do
@@ -100,8 +117,7 @@ parseFile fileName parser = do
 
 main :: IO ()
 main = do 
- --path <- readLn
- let path = "simple.json"
+ path <- readLn
  parseFile path parseMap
 
 
