@@ -1,10 +1,9 @@
 module Main where
 import Control.Applicative
+import Data.Char
 
-data JsonNumber = JsonInt Int | JsonFloat Float | JsonDouble Double
- deriving Show
 
-data JsonType = JsonBool Bool | JsonString String | JsonMap [(String, JsonType)] | JsonArray [JsonType] | JsonNull | JsonNumber
+data JsonType = JsonBool Bool | JsonString String | JsonMap [(String, JsonType)] | JsonArray [JsonType] | JsonNull | JsonInt Int
  deriving Show
 
 newtype Parser a = Parser { parse :: String -> [(a, String)] }
@@ -70,7 +69,8 @@ parseString = JsonString <$> parseStringLiteral
 
 whitespace = many (symbol ' ')
 
-parseJson = parseString <|> parseBool
+parseJson :: Parser JsonType
+parseJson = parseString <|> parseBool <|> parseNumber
 
 parseRecord :: Parser (String, JsonType)
 parseRecord =  (,) <$> parseStringLiteral <* whitespace <* symbol ':' <* whitespace <*> parseJson
@@ -78,9 +78,18 @@ parseRecord =  (,) <$> parseStringLiteral <* whitespace <* symbol ':' <* whitesp
 parseMap :: Parser JsonType
 parseMap = symbol '{' *>  whitespace *> (JsonMap <$> (many record)) <* whitespace <* symbol '}'
    where record = (do
+              whitespace
               symbol ','
+              whitespace
               parseRecord)
                <|> parseRecord 
+
+parseNumber :: Parser JsonType
+parseNumber = do
+          mc <- fmap (\x -> if isDigit x then Just x else Nothing) parseChar
+          case mc of
+             Just digit -> return (JsonInt (digitToInt digit)) -- TODO: currently only parses one integer
+             Nothing    -> empty
 
 parseFile :: Show a => FilePath -> Parser a -> IO ()
 parseFile fileName parser = do
